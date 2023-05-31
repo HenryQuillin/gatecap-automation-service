@@ -50,8 +50,9 @@ function getArticlesV2(req, res) {
         
         articles.push(article);
     }
-    
+    updateAirtable(articles);
     res.json(articles);
+     
 }
 
 
