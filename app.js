@@ -20,9 +20,14 @@ app.post('/extract', (req, res) => {
 });
 
 function getArticlesV2(req, res) { 
+    const alertEmailURL = "https://mail.google.com/mail/u/3/#inbox/" + req.body.alertEmailID;
     const html = req.body.html;
     const $ = cheerio.load(html);
     let articles = [];
+    const alertQueryString = getAlertQueryString(req.body.subject);
+    const company = getCompany(alertQueryString);
+
+
     
     let linkElements = $("td:nth-child(2) > table > tbody > tr:nth-child(1) > td > a");
     let titleElements = $("td:nth-child(2) > table > tbody > tr:nth-child(1) > td > a");
@@ -35,7 +40,10 @@ function getArticlesV2(req, res) {
             "title": $(titleElements[i]).text(),
             "content_preview": $(previewElements[i]).text(),
             "source": $(sourceElements[i]).text(),
-            "link": $(linkElements[i]).attr('href')
+            "link": $(linkElements[i]).attr('href'),
+            "company": company,
+            "alertQueryString": alertQueryString,
+            "alertEmailURL": alertEmailURL
         };
         
         // get the type of content
@@ -50,41 +58,10 @@ function getArticlesV2(req, res) {
         
         articles.push(article);
     }
+    getCompany
     updateAirtable(articles);
     res.json(articles);
      
-}
-
-
-
-
-function getArticlesV1(req, res) { 
-    const html = req.body.html;
-    const alertQueryString = getAlertQueryString(req.body.subject);
-    const company = getCompany(alertQueryString);
-    const $ = cheerio.load(html);
-    let articles = [];
-    
-    let linkElements = $("td:nth-child(2) > table > tbody > tr:nth-child(1) > td > a");
-    let titleElements = $("td:nth-child(2) > table > tbody > tr:nth-child(1) > td > a");
-    let previewElements = $("td:nth-child(2) > table > tbody > tr:nth-child(2) > td");
-    let sourceElements = $("td:nth-child(2) > table > tbody > tr:nth-child(3) > td:nth-child(1) > a");
-
-    for (let i = 0; i < linkElements.length; i++) {
-        let article = {
-            "company": company,
-            "alertQueryString": alertQueryString,
-            "type": "News",
-            "title": $(titleElements[i]).text(),
-            "content_preview": $(previewElements[i]).text(),
-            "source": $(sourceElements[i]).text(),
-            "link": $(linkElements[i]).attr('href')
-        };
-        articles.push(article);
-    }
-    updateAirtable(articles);
-
-    res.json(articles);
 }
 
 
@@ -98,7 +75,8 @@ function updateAirtable(articles) {
                 "Title": article.title,
                 "Content Preview": article.content_preview,
                 "Source": article.source,
-                "Link": article.link
+                "Link": article.link,
+                "Alert Email URL": article.alertEmailURL,
 
         }, function(err, record) {
             if (err) { console.error(err); return; }
