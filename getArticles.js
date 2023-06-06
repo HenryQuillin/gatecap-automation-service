@@ -1,5 +1,13 @@
 const Airtable = require("airtable");
 const cheerio = require("cheerio");
+const stringSimilarity = require('string-similarity');
+let table = "News Log";
+// eslint-disable-next-line no-undef
+let port = process.env.PORT;
+if (port == null || port == "") {
+  table = "News Log - Dev";
+}
+
 
 function getArticles(req, res) {
   const alertEmailURL =
@@ -67,13 +75,11 @@ function getArticles(req, res) {
         .trim()
         .toLowerCase();
     }
-    // Check if this article's content preview is already in the map
-    if (groupedArticles.has(article.content_preview)) {
-      // If it is, push the article to the existing array
-      groupedArticles.get(article.content_preview).push(article);
+    let similarKey = getSimilarKey(groupedArticles, article.title, article.content_preview);
+    if (similarKey) {
+      groupedArticles.get(similarKey).push(article);
     } else {
-      // If it's not, create a new array with this article
-      groupedArticles.set(article.content_preview, [article]);
+      groupedArticles.set(article.title + "_" + article.content_preview, [article]);
     }
   }
 
@@ -105,7 +111,7 @@ const base = new Airtable({
 }).base("appKfm9gouHkcTC42");
 function updateAirtable(articles) {
   articles.forEach((article) => {
-    base("News Log").create(
+    base(table).create(
       {
         Company: article.company,
         "Alert Query String": article.alertQueryString,
@@ -182,6 +188,26 @@ function getDate(dateString) {
   // Return the formatted date and time
   return year + "-" + month + "-" + day;
 }
+
+
+function getSimilarKey(groupedArticles, title, contentPreview) {
+  const titleSimilarityThreshold = 0.8;  // adjust this value to fit your needs
+  const contentSimilarityThreshold = 0.8;  // adjust this value to fit your needs
+  let similarKey = null;
+
+  groupedArticles.forEach((_, key) => {
+    const [groupKeyTitle, groupKeyContent] = key.split("_");
+    const titleSimilarity = stringSimilarity.compareTwoStrings(groupKeyTitle, title);
+    const contentSimilarity = stringSimilarity.compareTwoStrings(groupKeyContent, contentPreview);
+    if (titleSimilarity > titleSimilarityThreshold || contentSimilarity > contentSimilarityThreshold) {
+      similarKey = key;
+    }
+  });
+
+  return similarKey;
+}
+
+
 
 module.exports = {
   getArticles: getArticles,
