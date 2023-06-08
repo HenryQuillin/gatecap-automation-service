@@ -15,7 +15,7 @@ app.post("/extract", (req, res) => {
   getArticles(req, res);
 });
   
-app.post("/getinfo", (req, res) => {
+app.post("/getinfo", async (req, res) => {
   getInfo(req, res);
 });
 
