@@ -1,166 +1,158 @@
-
 const Airtable = require("airtable");
 const axios = require("axios");
+const puppeteer = require("puppeteer-extra");
+
+// Add stealth plugin and use defaults
+const pluginStealth = require("puppeteer-extra-plugin-stealth");
+const { executablePath } = require("puppeteer");
+
 var base = new Airtable({
   apiKey:
     "pat6UUeva3HgsCP0B.08d49df5c164666ce8e2415f9a3e0800bb43afbf190450b4be31cd79bccd75fd",
 }).base("appKfm9gouHkcTC42");
 
-
 async function getInfo(req, res) {
-
   try {
     let record = await base("Deal Flow").find(req.body.newlyAddedRecordID);
-    const recordName = record.fields["Name"];
+    let recordName = record.fields["Name"];
+    recordName = "yellowheart";
     const permalink = await getUUID(recordName);
-    res.status(200).json(permalink);
-    
 
+    // await getBasicInfo(permalink);
 
+    const data = await scrapePage(permalink);
+    console.log(data);
+    updateAirtable(data, req.body.newlyAddedRecordID);
+
+    res.json({ status: "success" });
   } catch (error) {
     console.error(error);
-    res.status(500).send('An error occurred');
+    res.status(500).send("An error occurred");
   }
-
 }
 
 async function getUUID(name) {
   let config = {
-    method: 'get',
+    method: "get",
     maxBodyLength: Infinity,
-    url: `https://api.crunchbase.com/api/v4/autocompletes?query=${encodeURIComponent(name)}&collection_ids=organizations&limit=1`,
-    headers: { 
-      'X-cb-user-key': '9011e1fdbe5146865162bb45b036aa92'
-    }
+    url: `https://api.crunchbase.com/api/v4/autocompletes?query=${encodeURIComponent(
+      name
+    )}&collection_ids=organizations&limit=1`,
+    headers: {
+      "X-cb-user-key": "9011e1fdbe5146865162bb45b036aa92",
+    },
   };
 
   try {
     let response = await axios.request(config);
-    console.log(JSON.stringify(response.data.entities[0]));
     return response.data.entities[0].identifier.permalink;
   } catch (error) {
     console.error(error);
   }
 }
 
-  // try {
-  //   let record = await base("Deal Flow").find(req.body.newlyAddedRecordID);
-  //   const recordName = record.fields["Name"];
-  //   let data = JSON.stringify({
-  //     field_ids: [
-  //       "identifier",
-  //       "short_description",
-  //       "website_url",
-  //       "twitter",
-  //       "linkedin",
-  //       "facebook",
-  //       "image_url",
-  //     ],
-  //     order: [
-  //       {
-  //         field_id: "rank_org",
-  //         sort: "asc",
-  //       },
-  //     ],
-  //     query: [
-  //       {
-  //         type: "predicate",
-  //         field_id: "identifier",
-  //         operator_id: "includes",
-  //         values: [recordName],
-  //       },
-  //       {
-  //         type: "predicate",
-  //         field_id: "facet_ids",
-  //         operator_id: "includes",
-  //         values: ["company"],
-  //       },
-  //     ],
-  //     limit: 50,
-  //   });
-  //   let config = {
-  //     method: "post",
-  //     maxBodyLength: Infinity,
-  //     url: "https://api.crunchbase.com/api/v4/searches/organizations",
-  //     headers: {
-  //       "X-cb-user-key": "9011e1fdbe5146865162bb45b036aa92",
-  //       "Content-Type": "application/json",
-  //     },
-  //     data: data,
-  //   };
-  
-  //   let response = await axios.request(config);
-  
-  //   if (response.statusText == "OK") {
-  //     let data = await response.data;
-  //     if (data.entities && data.entities.length > 0) {
-  //       data = data.entities[0];
-  
-  
-  //       updateAirtable(record.id, data, base);
-  //       res.send("Success");
-  
-  
-  //     } else {
-  //       console.error("No entities found in first API response");
-  //     }
-  //   } else {
-  //     console.error(
-  //       "First API request failed:",
-  //       response.status,
-  //       response.statusText
-  //     );
-  //   }
-
-
-
-  // } catch (error) {
-  //   console.error(error);
-  // }
-
-
-
-function updateAirtable(id, data, base){
-  let websiteUrl = data.properties.website_url || "";
-  let imageUrl = data.properties.image_url || "";
-  let linkedin = data.properties.linkedin.value || "";
-  let facebook = data.properties.facebook.value || "";
-  let twitter = data.properties.twitter.value || "";
-  let description = data.properties.short_description || "";
-
-  base("Deal Flow").update([
-    {
-      id: id,
-      fields: {
-        "Website URL": websiteUrl,
-        "Logo URL": imageUrl,
-        Linkedin: linkedin,
-        Facebook: facebook,
-        Twitter: twitter,
-        Description: description,
-        "Diligence Status": "Pending" ,
-        Logo: [
-          {
-            url: imageUrl,
-            filename: "Logo",
-          },
-        ],
-      },
-    },
-  ], function(err, records) {
-    if (err) {
-      console.error(err);
-      return;
-    }
-    records.forEach(function(record) {
-      console.log(record.get("Title"));
-    });
-  });
-  
-}
-
-
 module.exports = {
   getInfo: getInfo,
 };
-2;
+
+async function scrapePage(permalink) {
+  puppeteer.use(pluginStealth());
+  return puppeteer
+    .launch({ headless: "new", executablePath: executablePath() })
+    .then(async (browser) => {
+      const page = await browser.newPage();
+
+      await page.goto("https://www.crunchbase.com/login", {
+        waitUntil: "networkidle2",
+        timeout: 12000,
+      });
+      await page.waitForTimeout(1000);
+      await page.screenshot({ path: "screenshot.png" });
+
+      try {
+        await page.type("#mat-input-5", "alfred@gate-cap.com");
+        await page.type("#mat-input-6", "KVVE@9810Fm6pKs4");
+
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: "networkidle0" }),
+          page.click(".login"),
+        ]);
+
+        await page.goto(
+          "https://www.crunchbase.com/discover/organization.companies",
+          { waitUntil: "networkidle2", timeout: 12000 }
+        );
+
+        await page.type("#mat-input-1", permalink);
+        await page.keyboard.press("Enter");
+
+        await page.waitForTimeout(1000);
+
+        let headers = await page.$$eval(
+          "grid-column-header > .header-contents > div",
+          (elements) =>
+            elements.filter((e) => e.innerText).map((e) => e.innerText)
+        );
+        let contents = await page.$$eval(
+          "grid-row > grid-cell > div > field-formatter",
+          (elements) => elements.map((e) => e.innerText)
+        );
+
+        let res = {};
+        for (let i = 0; i < contents.length; i++) {
+          res[headers[i]] = contents[i];
+        }
+        await page.close();
+
+        return res;
+      } catch (error) {
+        console.log(error);
+      }
+
+      return {};
+    });
+}
+
+async function getBasicInfo(permalink) {
+  let config = {
+    method: "get",
+    maxBodyLength: Infinity,
+    url: `https://api.crunchbase.com/api/v4/entities/organizations/${permalink}?field_ids=short_description%2C%20twitter%2C%20linkedin%2C%20facebook%2C%20image_url\n`,
+    headers: {
+      "X-cb-user-key": "9011e1fdbe5146865162bb45b036aa92",
+      Cookie: "cid=CiheL2R/ki9+eQAaGtHbAg==",
+    },
+  };
+  try {
+    const response = await axios.request(config);
+    const data = response.data;
+    let flatData = { ...data.properties, ...data.properties.identifier };
+
+    delete flatData.identifier;
+
+    return flatData;
+  } catch (error) {
+    console.log("Failed the crunchbase.com/api/v4/entities request" + error);
+  }
+}
+
+async function updateAirtable(data, recordID) {
+  console.log("updateAirtable ran");
+  base("Deal Flow").update(
+    [
+      {
+        id: recordID,
+        fields: data,
+      },
+    ],
+    function (err, records) {
+      if (err) {
+        console.error(err);
+        return;
+      }
+      records.forEach(function (record) {
+        console.log("Updated ", record.get("Name"));
+      });
+    }
+  );
+}
