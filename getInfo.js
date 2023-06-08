@@ -58,7 +58,7 @@ module.exports = {
 async function scrapePage(permalink) {
   puppeteer.use(pluginStealth());
   return puppeteer
-    .launch({ headless: false, executablePath: executablePath() })
+    .launch({ headless: "new", executablePath: executablePath() })
     .then(async (browser) => {
       const page = await browser.newPage();
 
