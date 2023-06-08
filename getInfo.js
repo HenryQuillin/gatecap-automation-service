@@ -58,7 +58,7 @@ module.exports = {
 async function scrapePage(permalink) {
   // puppeteer.use(pluginStealth());
   return puppeteer
-    .launch({ headless: false,args: ['--no-sandbox','--disable-setuid-sandbox'], executablePath: process.env.CHROME_BIN || null,})
+    .launch({ headless: false,args: ['--no-sandbox','--disable-setuid-sandbox']})
     .then(async (browser) => {
       const page = await browser.newPage();
 
