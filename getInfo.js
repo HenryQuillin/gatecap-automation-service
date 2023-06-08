@@ -15,14 +15,14 @@ async function getInfo(req, res) {
   try {
     let record = await base("Deal Flow").find(req.body.newlyAddedRecordID);
     let recordName = record.fields["Name"];
-    recordName = "yellowheart";
     const permalink = await getUUID(recordName);
 
-    // await getBasicInfo(permalink);
+    const data1 = await getBasicInfo(permalink);
 
-    const data = await scrapePage(permalink);
+    const data2 = await scrapePage(permalink);
+    const data = { ...data1, ...data2 };
     console.log(data);
-    updateAirtable(data, req.body.newlyAddedRecordID);
+    await updateAirtable(data, req.body.newlyAddedRecordID);
 
     res.json({ status: "success" });
   } catch (error) {
@@ -58,7 +58,7 @@ module.exports = {
 async function scrapePage(permalink) {
   puppeteer.use(pluginStealth());
   return puppeteer
-    .launch({ headless: "new", executablePath: executablePath() })
+    .launch({ headless: false, executablePath: executablePath() })
     .then(async (browser) => {
       const page = await browser.newPage();
 
@@ -66,8 +66,6 @@ async function scrapePage(permalink) {
         waitUntil: "networkidle2",
         timeout: 12000,
       });
-      await page.waitForTimeout(1000);
-      await page.screenshot({ path: "screenshot.png" });
 
       try {
         await page.type("#mat-input-5", "alfred@gate-cap.com");
@@ -79,27 +77,37 @@ async function scrapePage(permalink) {
         ]);
 
         await page.goto(
-          "https://www.crunchbase.com/discover/organization.companies",
+          "https://www.crunchbase.com/discover/saved/view-for-automation/2fe3a89b-0a52-4f11-b3e7-b7ec2777f00a",
           { waitUntil: "networkidle2", timeout: 12000 }
         );
 
         await page.type("#mat-input-1", permalink);
         await page.keyboard.press("Enter");
 
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(1500);
 
         let headers = await page.$$eval(
           "grid-column-header > .header-contents > div",
-          (elements) =>
-            elements.filter((e) => e.innerText).map((e) => e.innerText)
+          (elements) => {
+            let validElements = elements
+              .filter((e) => e.innerText)
+              .map((e) => e.innerText);
+
+            if (validElements[validElements.length - 1] === "ADD COLUMN") {
+              validElements.pop();
+            }
+
+            return validElements;
+          }
         );
+
         let contents = await page.$$eval(
-          "grid-row > grid-cell > div > field-formatter",
+          "grid-row:first-of-type > grid-cell > div > field-formatter",
           (elements) => elements.map((e) => e.innerText)
         );
 
         let res = {};
-        for (let i = 0; i < contents.length; i++) {
+        for (let i = 0; i < headers.length; i++) {
           res[headers[i]] = contents[i];
         }
         await page.close();
@@ -117,7 +125,7 @@ async function getBasicInfo(permalink) {
   let config = {
     method: "get",
     maxBodyLength: Infinity,
-    url: `https://api.crunchbase.com/api/v4/entities/organizations/${permalink}?field_ids=short_description%2C%20twitter%2C%20linkedin%2C%20facebook%2C%20image_url\n`,
+    url: `https://api.crunchbase.com/api/v4/entities/organizations/${permalink}?field_ids=facebook%2Ctwitter%2Clinkedin%2Cshort_description%2Cimage_url`,
     headers: {
       "X-cb-user-key": "9011e1fdbe5146865162bb45b036aa92",
       Cookie: "cid=CiheL2R/ki9+eQAaGtHbAg==",
@@ -126,11 +134,31 @@ async function getBasicInfo(permalink) {
   try {
     const response = await axios.request(config);
     const data = response.data;
-    let flatData = { ...data.properties, ...data.properties.identifier };
-
-    delete flatData.identifier;
-
-    return flatData;
+    let websiteUrl = data.properties.website_url || "—";
+    let imageUrl = data.properties.image_url || "";
+    let linkedin =
+      (data.properties.linkedin && data.properties.linkedin.value) || "—";
+    let facebook =
+      (data.properties.facebook && data.properties.facebook.value) || "—";
+    let twitter =
+      (data.properties.twitter && data.properties.twitter.value) || "—";
+    let description = data.properties.short_description || "—";
+    let dataToReturn = {
+      "Website URL": websiteUrl,
+      "Logo URL": imageUrl,
+      Linkedin: linkedin,
+      Facebook: facebook,
+      Twitter: twitter,
+      Description: description,
+      Logo: [
+        {
+          url: imageUrl,
+          filename: "Logo",
+        },
+      ],
+      "Diligence Status": "Pending",
+    };
+    return dataToReturn;
   } catch (error) {
     console.log("Failed the crunchbase.com/api/v4/entities request" + error);
   }
