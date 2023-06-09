@@ -1,6 +1,6 @@
 const Airtable = require("airtable");
 const axios = require("axios");
-const puppeteer = require("puppeteer");
+const puppeteer = require("puppeteer-extra");
 
 // Add stealth plugin and use defaults
 const pluginStealth = require("puppeteer-extra-plugin-stealth");
@@ -56,7 +56,7 @@ module.exports = {
 };
 
 async function scrapePage(permalink) {
-  // puppeteer.use(pluginStealth());
+  puppeteer.use(pluginStealth());
   return puppeteer
     .launch({ args: ['--no-sandbox','--disable-setuid-sandbox']})
     .then(async (browser) => {
