@@ -58,18 +58,24 @@ module.exports = {
 async function scrapePage(permalink) {
   puppeteer.use(pluginStealth());
   return puppeteer
-    .launch({ args: ['--no-sandbox','--disable-setuid-sandbox']})
+    .launch({headless:"new", args: ['--no-sandbox','--disable-setuid-sandbox']})
     .then(async (browser) => {
       const page = await browser.newPage();
+      // await page.screenshot({ path: "screenshot.png" });
+
 
       await page.goto("https://www.crunchbase.com/login", {
         waitUntil: "networkidle2",
         timeout: 12000,
       });
 
+      // await page.screenshot({ path: "screenshot.png" });
+
       try {
         await page.type("#mat-input-5", "alfred@gate-cap.com");
         await page.type("#mat-input-6", "KVVE@9810Fm6pKs4");
+      await page.screenshot({ path: "screenshot.png" });
+
 
         await Promise.all([
           page.waitForNavigation({ waitUntil: "networkidle0" }),
@@ -78,7 +84,7 @@ async function scrapePage(permalink) {
 
         await page.goto(
           "https://www.crunchbase.com/discover/saved/view-for-automation/2fe3a89b-0a52-4f11-b3e7-b7ec2777f00a",
-          { waitUntil: "networkidle2", timeout: 12000 }
+          { waitUntil: "networkidle2", timeout: 25000 }
         );
 
         await page.type("#mat-input-1", permalink);
