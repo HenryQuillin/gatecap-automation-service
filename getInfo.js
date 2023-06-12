@@ -4,7 +4,6 @@ const puppeteer = require("puppeteer-extra");
 
 // Add stealth plugin and use defaults
 const pluginStealth = require("puppeteer-extra-plugin-stealth");
-const { executablePath } = require("puppeteer");
 
 var base = new Airtable({
   apiKey:
@@ -58,24 +57,24 @@ module.exports = {
 async function scrapePage(permalink) {
   puppeteer.use(pluginStealth());
   return puppeteer
-    .launch({headless:"new", args: ['--no-sandbox','--disable-setuid-sandbox']})
+    .launch({
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    })
     .then(async (browser) => {
       const page = await browser.newPage();
       // await page.screenshot({ path: "screenshot.png" });
 
-
       await page.goto("https://www.crunchbase.com/login", {
         waitUntil: "networkidle2",
-        timeout: 12000,
+        timeout: 22000,
       });
 
-      // await page.screenshot({ path: "screenshot.png" });
+      await page.screenshot({ path: "screenshot.png" });
 
       try {
         await page.type("#mat-input-5", "alfred@gate-cap.com");
         await page.type("#mat-input-6", "KVVE@9810Fm6pKs4");
-      await page.screenshot({ path: "screenshot.png" });
-
+        await page.screenshot({ path: "screenshot.png" });
 
         await Promise.all([
           page.waitForNavigation({ waitUntil: "networkidle0" }),

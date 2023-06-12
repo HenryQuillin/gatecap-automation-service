@@ -191,8 +191,8 @@ function getDate(dateString) {
 
 
 function getSimilarKey(groupedArticles, title, contentPreview) {
-  const titleSimilarityThreshold = 0.7;  // adjust this value to fit your needs
-  const contentSimilarityThreshold = 0.7;  // adjust this value to fit your needs
+  const titleSimilarityThreshold = 0.6;  // adjust this value to fit your needs
+  const contentSimilarityThreshold = 0.6;  // adjust this value to fit your needs
   let similarKey = null;
 
   groupedArticles.forEach((_, key) => {
