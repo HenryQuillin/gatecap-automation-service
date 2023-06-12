@@ -23,7 +23,7 @@ async function getInfo(req, res) {
     console.log(data);
     await updateAirtable(data, req.body.newlyAddedRecordID);
 
-    res.json({ status: "success" });
+    res.json({ data: data });
   } catch (error) {
     console.error(error);
     res.status(500).send("An error occurred");
